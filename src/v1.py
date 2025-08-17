@@ -1,5 +1,6 @@
 import flet as ft
 import datetime
+import sqlite3
 
 
 class tracker:
@@ -13,8 +14,12 @@ class tracker:
             "Inter Bold": "https://rsms.me/inter/font-files/Inter-Bold.woff2"
         }
 
+        self.conn = sqlite3.connect("attendance.db")
+        self.c = self.conn.cursor()
+
         self.attend_val = 75
         self.class_duration = 55
+        self.weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
 
         self.content_column = ft.Column(spacing= 10, expand= True)
         self.scroll_view = ft.Container(
@@ -109,6 +114,17 @@ class tracker:
         # Show homepage by default
         self.show_homepage(None)
 
+        self.conn.execute("""CREATE TABLE IF NOT EXISTS attendance (
+            id INTEGER,
+            subject text,
+            req_attendance INTEGER,
+            days text,
+            timing INTEGER,
+            current_attendance INTEGER
+        )""")
+
+        self.conn.commit()
+
     def create_sub_screen(self, e):
         # Create the overlay screen
 
@@ -121,7 +137,20 @@ class tracker:
             weight="w600",
         )
 
-        overlay_screen = ft.Container(
+        self.course_name = ft.TextField(
+            hint_text="Course name",
+            hint_style=ft.TextStyle(color="#888888", size=16),
+            text_style=ft.TextStyle(color="#ffffff", size=16),
+            bgcolor="#2a2a2a",
+            border_color="#404040",
+            focused_border_color="#ff6b35",
+            border_radius=12,
+            height=60,
+            content_padding=ft.Padding(20, 15, 20, 15),
+            border_width=1,
+        )
+
+        self.overlay_screen = ft.Container(
             bgcolor="#0a0a0a",  # Same as your page background
             expand=True,
             content=ft.Column(
@@ -163,18 +192,7 @@ class tracker:
                                 # Course name input
                                 ft.Container(
                                     padding=ft.Padding(20, 0, 20, 0),
-                                    content=ft.TextField(
-                                        hint_text="Course name",
-                                        hint_style=ft.TextStyle(color="#888888", size=16),
-                                        text_style=ft.TextStyle(color="#ffffff", size=16),
-                                        bgcolor="#2a2a2a",
-                                        border_color="#404040",
-                                        focused_border_color="#ff6b35",
-                                        border_radius=12,
-                                        height=60,
-                                        content_padding=ft.Padding(20, 15, 20, 15),
-                                        border_width=1,
-                                    )
+                                    content= self.course_name
                                 ),
                                 # Required Attendance section
                                 ft.Container(
@@ -273,7 +291,7 @@ class tracker:
         )
 
         # Add the overlay screen to the stack
-        self.main_stack.controls.append(overlay_screen)
+        self.main_stack.controls.append(self.overlay_screen)
 
         # Hide the FAB
         self.fab.visible = False
@@ -295,7 +313,66 @@ class tracker:
         self.page.update()
 
     def add_class_dialog(self, e):
-        print("Add class dialog")
+        self.days = [ft.Checkbox(label=day, value=False) for day in self.weekdays]
+        self.bs = ft.BottomSheet(
+            ft.Container(
+                ft.Column(
+                    [
+                        ft.Text("Select the days for the class", weight="bold"),
+                        ft.Column(self.days),
+                        ft.ElevatedButton("Confirm", on_click=self.start_time),
+                    ],
+                    tight=True,
+                ),
+                padding=20,
+            ),
+        )
+        self.page.overlay.append(self.bs)
+        self.bs.open = True
+        self.page.update()
+
+    def start_time(self, e):
+        self.bs.content.clean()
+        self.selected_days = [cb.label for cb in self.days if cb.value]
+
+        # Store pickers mapped to each day
+        self.day_time_pickers = {}
+
+        # Create UI rows: Day + Pick Time button
+        rows = []
+        for day in self.selected_days:
+            tp = ft.TimePicker(
+                confirm_text="Confirm",
+                error_invalid_text="Time out of range",
+                help_text=f"Pick time for {day}",
+            )
+            self.day_time_pickers[day] = tp
+            rows.append(
+                ft.Row(
+                    [
+                        ft.Text(day),
+                        ft.ElevatedButton(
+                            "Pick time",
+                            icon=ft.Icons.ACCESS_TIME,
+                            on_click=lambda _, picker=tp: self.page.open(picker),
+                        ),
+                    ]
+                )
+            )
+
+        # Add final confirm button
+        rows.append(
+            ft.ElevatedButton(
+                "Confirm All",
+                on_click=lambda e: print(
+                    {day: picker.value for day, picker in self.day_time_pickers.items()}
+                ),
+            )
+        )
+
+        # Set new bottom sheet content
+        self.bs.content = ft.Column(rows, tight=True)
+        self.bs.update()
 
     def get_greeting(self):
         hour = datetime.datetime.now().hour
