@@ -282,7 +282,7 @@ class tracker:
                                 padding=ft.Padding(25, 15, 25, 15),
                             ),
                             width=self.page.width * 0.8,
-                            # on_click=self.save_course
+                            on_click=self.save_course
                         )
                     )
                 ]
@@ -343,6 +343,7 @@ class tracker:
             time_str = tp.value.strftime("%H:%M")
             self.c.execute("INSERT INTO attendance (subject, req_attendance, day, timing) VALUES (?, ?, ?, ?)", (self.course_name.value, self.attend_val,day,time_str))
             self.conn.commit()
+
         for day in self.selected_days:
             tp = ft.TimePicker(
                 confirm_text="Confirm",
@@ -379,6 +380,12 @@ class tracker:
         self.bs.content = ft.Column(rows, tight=True)
         self.bs.update()
 
+    def save_course(self, e):
+        self.page.controls.clear()
+        self.page.update()
+        self.show_homepage(e)
+
+
     def get_greeting(self):
         hour = datetime.datetime.now().hour
         if hour < 12:
@@ -389,6 +396,7 @@ class tracker:
             return "Good evening"
 
     def show_homepage(self,e):
+        self.page.update()
         self.content_column.controls.clear()
 
         self.home_icon.bgcolor = "#404040"
@@ -419,107 +427,125 @@ class tracker:
             )
         )
 
-        sub_card = ft.Container(
-            margin=ft.Margin(10, 0, 10, 10),
-            border_radius=15,
-            expand=True,
-            padding=ft.Padding(20, 20, 20, 15),
-            bgcolor="#2a2a2a",  # Dark background like in the image
-            content=ft.Column(
-                spacing=15,
-                controls=[
-                    # Top section with subject and time
-                    ft.Row(
-                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                        controls=[
-                            ft.Text(
-                                "Mathematics",
-                                size=18,
-                                color="#ffffff",
-                                font_family="Inter",
-                                weight="w600"
-                            ),
-                            ft.Text(
-                                "10:00 - 11:00 AM",
-                                size=14,
-                                color="#b8b8b8",
-                                font_family="Inter",
-                                weight="w400"
-                            )
-                        ]
-                    ),
+        current_day = (datetime.datetime.now()).strftime("%A")
+        self.c.execute("SELECT * FROM attendance WHERE day = ?", (current_day,))
+        items = self.c.fetchall()
 
-                    # Progress section
-                    ft.Row(
-                        spacing=8,
-                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                        controls=[
-                            # Progress bar
-                            ft.Container(
-                                height=8,
-                                border_radius=4,
-                                bgcolor="#4a4a4a",  # Background of progress bar
-                                expand=True,  # Takes available space
-                                content=ft.Container(
-                                    width=None,  # This will be calculated based on percentage
-                                    height=8,
-                                    border_radius=4,
-                                    bgcolor="#ff6b35",  # Orange progress color
-                                    # For 85% progress, you might want to set width dynamically
-                                )
-                            ),
-                            # Percentage text
-                            ft.Text(
-                                "85%",
-                                size=16,
-                                color="#ffffff",
-                                font_family="Inter",
-                                weight="w600"
-                            )
-                        ]
-                    ),
+        if items:
+            for item in items:
+                subject, req_attendance, day, timing, current_attendance = item
 
-                    # Bottom buttons section
-                    ft.Row(
-                        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                sub_card = ft.Container(
+                    margin=ft.Margin(10, 0, 10, 10),
+                    border_radius=15,
+                    expand=True,
+                    padding=ft.Padding(20, 20, 20, 15),
+                    bgcolor="#2a2a2a",  # Dark background like in the image
+                    content=ft.Column(
+                        spacing=15,
                         controls=[
-                            ft.Container(
-                                padding=ft.Padding(20, 10, 20, 10),
-                                border_radius=8,
-                                bgcolor="#f5f5f5",  # Light background for Present
-                                content=ft.Text(
-                                    "Present",
-                                    size=14,
-                                    color="#2a2a2a",  # Dark text
-                                    font_family="Inter",
-                                    weight="w500"
-                                )
+                            # Top section with subject and time
+                            ft.Row(
+                                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                                controls=[
+                                    ft.Text(
+                                        subject,
+                                        size=18,
+                                        color="#ffffff",
+                                        font_family="Inter",
+                                        weight="w600"
+                                    ),
+                                    ft.Text(
+                                        timing,
+                                        size=14,
+                                        color="#b8b8b8",
+                                        font_family="Inter",
+                                        weight="w400"
+                                    )
+                                ]
                             ),
-                            ft.Container(
-                                padding=ft.Padding(20, 10, 20, 10),
-                                border_radius=8,
-                                bgcolor="#ff6b35",  # Orange background for Absent
-                                content=ft.Text(
-                                    "Absent",
-                                    size=14,
-                                    color="#ffffff",  # White text
-                                    font_family="Inter",
-                                    weight="w500"
-                                )
+
+                            # Progress section
+                            ft.Row(
+                                spacing=8,
+                                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                                controls=[
+                                    # Progress bar
+                                    ft.Container(
+                                        height=8,
+                                        border_radius=4,
+                                        bgcolor="#4a4a4a",  # Background of progress bar
+                                        expand=True,  # Takes available space
+                                        content=ft.Container(
+                                            width=None,  # This will be calculated based on percentage
+                                            height=8,
+                                            border_radius=4,
+                                            bgcolor="#ff6b35",  # Orange progress color
+                                            # For 85% progress, you might want to set width dynamically
+                                        )
+                                    ),
+                                    # Percentage text
+                                    ft.Text(
+                                        current_attendance,
+                                        size=16,
+                                        color="#ffffff",
+                                        font_family="Inter",
+                                        weight="w600"
+                                    )
+                                ]
+                            ),
+
+                            # Bottom buttons section
+                            ft.Row(
+                                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                                controls=[
+                                    ft.Container(
+                                        padding=ft.Padding(20, 10, 20, 10),
+                                        border_radius=8,
+                                        bgcolor="#f5f5f5",  # Light background for Present
+                                        content=ft.Text(
+                                            "Present",
+                                            size=14,
+                                            color="#2a2a2a",  # Dark text
+                                            font_family="Inter",
+                                            weight="w500"
+                                        )
+                                    ),
+                                    ft.Container(
+                                        padding=ft.Padding(20, 10, 20, 10),
+                                        border_radius=8,
+                                        bgcolor="#ff6b35",  # Orange background for Absent
+                                        content=ft.Text(
+                                            "Absent",
+                                            size=14,
+                                            color="#ffffff",  # White text
+                                            font_family="Inter",
+                                            weight="w500"
+                                        )
+                                    )
+                                ]
                             )
                         ]
                     )
-                ]
+                )
+                self.content_column.controls.extend([greet_text,sub_card])
+
+        else:  # No classes today
+            self.content_column.controls.extend( [greet_text,
+                ft.Container(
+                    padding=ft.Padding(20, 40, 20, 0),
+                    content=ft.Text(
+                        "No classes today 🎉",
+                        size=22,
+                        color="#aaaaaa",
+                        font_family="Inter",
+                        weight="w600",
+                    )
+                )
+            ]
             )
-        )
-        # Add all components to the content column
-        self.content_column.controls.extend([
-            greet_text,
-            sub_card
-        ])
 
         self.page.update()
-
 
 def main(page: ft.Page):
     tracker(page)
