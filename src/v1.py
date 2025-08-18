@@ -115,10 +115,9 @@ class tracker:
         self.show_homepage(None)
 
         self.conn.execute("""CREATE TABLE IF NOT EXISTS attendance (
-            id INTEGER,
             subject text,
             req_attendance INTEGER,
-            days text,
+            day text,
             timing INTEGER,
             current_attendance INTEGER
         )""")
@@ -340,11 +339,16 @@ class tracker:
 
         # Create UI rows: Day + Pick Time button
         rows = []
+        def save_time(e, day):
+            time_str = tp.value.strftime("%H:%M")
+            self.c.execute("INSERT INTO attendance (subject, req_attendance, day, timing) VALUES (?, ?, ?, ?)", (self.course_name.value, self.attend_val,day,time_str))
+            self.conn.commit()
         for day in self.selected_days:
             tp = ft.TimePicker(
                 confirm_text="Confirm",
                 error_invalid_text="Time out of range",
                 help_text=f"Pick time for {day}",
+                on_change= lambda e: save_time(e, day)
             )
             self.day_time_pickers[day] = tp
             rows.append(
@@ -364,9 +368,10 @@ class tracker:
         rows.append(
             ft.ElevatedButton(
                 "Confirm All",
-                on_click=lambda e: print(
-                    {day: picker.value for day, picker in self.day_time_pickers.items()}
-                ),
+                on_click=lambda e: (print({day: picker.value for day, picker in self.day_time_pickers.items()}),
+                                setattr(self.bs, "open", False),
+                                self.page.update()
+                                )
             )
         )
 
