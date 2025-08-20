@@ -333,14 +333,15 @@ class tracker:
     def start_time(self, e):
         self.bs.content.clean()
         self.selected_days = [cb.label for cb in self.days if cb.value]
-
+        print(self.selected_days)
         # Store pickers mapped to each day
         self.day_time_pickers = {}
 
         # Create UI rows: Day + Pick Time button
         rows = []
-        def save_time(e, day):
-            time_str = tp.value.strftime("%H:%M")
+        def save_time(e, day, current_time):
+            time_str = current_time.value.strftime("%H:%M")
+            print(self.course_name.value, day, time_str, self.attend_val)
             self.c.execute("INSERT INTO attendance (subject, req_attendance, day, timing) VALUES (?, ?, ?, ?)", (self.course_name.value, self.attend_val,day,time_str))
             self.conn.commit()
 
@@ -349,8 +350,10 @@ class tracker:
                 confirm_text="Confirm",
                 error_invalid_text="Time out of range",
                 help_text=f"Pick time for {day}",
-                on_change= lambda e: save_time(e, day)
             )
+
+            tp.on_change = lambda e, current_day=day, current_time=tp: save_time(e, current_day,current_time)
+
             self.day_time_pickers[day] = tp
             rows.append(
                 ft.Row(
