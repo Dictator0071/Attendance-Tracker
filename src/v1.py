@@ -17,6 +17,7 @@ class tracker:
         self.conn = sqlite3.connect("attendance.db")
         self.c = self.conn.cursor()
 
+        self.sem_date = datetime.date(2025, 8, 4)
         self.attend_val = 75
         self.class_duration = 55
         self.weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
@@ -108,21 +109,20 @@ class tracker:
             expand=True
         )
 
-        self.page.add(self.main_stack)
-        # Add FAB to overlay
-        self.page.overlay.append(self.fab)
-        # Show homepage by default
-        self.show_homepage(None)
-
         self.conn.execute("""CREATE TABLE IF NOT EXISTS attendance (
             subject text,
             req_attendance INTEGER,
             day text,
             timing INTEGER,
-            current_attendance INTEGER
+            classes_held INTEGER,
+            classes_attended INTEGER
         )""")
 
         self.conn.commit()
+
+        self.page.add(self.main_stack)
+        self.page.overlay.append(self.fab)
+        self.show_homepage(None)
 
     def create_sub_screen(self, e):
         # Create the overlay screen
@@ -384,10 +384,17 @@ class tracker:
         self.bs.update()
 
     def save_course(self, e):
-        self.page.controls.clear()
-        self.page.update()
-        self.show_homepage(e)
+        self.close_overlay_screen(e)
+        self.show_homepage(None)
 
+    def classes_held(self, start_date, end_date, schedule):
+        total = 0
+        current_date = start_date
+        while current_date<= end_date:
+            if current_date.strftime("%A") in schedule:
+                total = total +1
+                current_date += datetime.timedelta(days=1)
+        return total
 
     def get_greeting(self):
         hour = datetime.datetime.now().hour
@@ -430,13 +437,17 @@ class tracker:
             )
         )
 
+        self.content_column.controls.append(greet_text)
+
         current_day = (datetime.datetime.now()).strftime("%A")
         self.c.execute("SELECT * FROM attendance WHERE day = ?", (current_day,))
         items = self.c.fetchall()
 
         if items:
             for item in items:
-                subject, req_attendance, day, timing, current_attendance = item
+                subject, req_attendance, day, timing, classes_held, classes_attended = item
+
+
 
                 sub_card = ft.Container(
                     margin=ft.Margin(10, 0, 10, 10),
@@ -484,12 +495,11 @@ class tracker:
                                             height=8,
                                             border_radius=4,
                                             bgcolor="#ff6b35",  # Orange progress color
-                                            # For 85% progress, you might want to set width dynamically
                                         )
                                     ),
                                     # Percentage text
                                     ft.Text(
-                                        current_attendance,
+                                        "90",
                                         size=16,
                                         color="#ffffff",
                                         font_family="Inter",
@@ -531,10 +541,10 @@ class tracker:
                         ]
                     )
                 )
-                self.content_column.controls.extend([greet_text,sub_card])
+                self.content_column.controls.extend([sub_card])
 
         else:  # No classes today
-            self.content_column.controls.extend( [greet_text,
+            self.content_column.controls.extend( [
                 ft.Container(
                     padding=ft.Padding(20, 40, 20, 0),
                     content=ft.Text(
