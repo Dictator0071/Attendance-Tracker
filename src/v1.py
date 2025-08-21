@@ -122,6 +122,15 @@ class tracker:
 
         self.page.add(self.main_stack)
         self.page.overlay.append(self.fab)
+        self.update_db()
+
+    def update_db(self):
+        self.c.execute("Select * FROM attendance")
+        items = self.c.fetchall()
+        self.conn.commit()
+        for item in items:
+            self.c.execute("UPDATE attendance SET classes_held = ? WHERE subject =?", (self.classes_held(self.sem_date, datetime.date.today(), item[0]), item[0]))
+            self.conn.commit()
         self.show_homepage(None)
 
     def create_sub_screen(self, e):
@@ -387,13 +396,18 @@ class tracker:
         self.close_overlay_screen(e)
         self.show_homepage(None)
 
-    def classes_held(self, start_date, end_date, schedule):
+    def classes_held(self, start_date, end_date, subject):
+        self.c.execute("SELECT * FROM attendance WHERE subject = ? COLLATE NOCASE", (subject,))
+        items = self.c.fetchall()
+        schedule = []
+        for item in items:
+            schedule.append(item[2])
         total = 0
         current_date = start_date
-        while current_date<= end_date:
+        while current_date <= end_date:
             if current_date.strftime("%A") in schedule:
                 total = total +1
-                current_date += datetime.timedelta(days=1)
+            current_date += datetime.timedelta(days=1)
         return total
 
     def get_greeting(self):
