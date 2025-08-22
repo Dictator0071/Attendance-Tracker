@@ -23,6 +23,6 @@ today = datetime.date(2025, 8, 22)
 
 c.execute("Select * from attendance")
 items = c.fetchall()
-c.execute(f"UPDATE attendance SET classes_held = ? WHERE subject =?", (0, 'Maths'))
+c.execute(f"UPDATE attendance SET classes_attended = ? WHERE subject =?", (3, 'Maths'))
 conn.commit()
 

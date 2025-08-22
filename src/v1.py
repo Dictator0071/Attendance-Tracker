@@ -461,7 +461,7 @@ class tracker:
             for item in items:
                 subject, req_attendance, day, timing, classes_held, classes_attended = item
 
-
+                att_per = round((classes_attended/classes_held) * 100)
 
                 sub_card = ft.Container(
                     margin=ft.Margin(10, 0, 10, 10),
@@ -499,21 +499,17 @@ class tracker:
                                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                                 controls=[
                                     # Progress bar
-                                    ft.Container(
-                                        height=8,
-                                        border_radius=4,
-                                        bgcolor="#4a4a4a",  # Background of progress bar
-                                        expand=True,  # Takes available space
-                                        content=ft.Container(
-                                            width=None,  # This will be calculated based on percentage
-                                            height=8,
-                                            border_radius=4,
-                                            bgcolor="#ff6b35",  # Orange progress color
-                                        )
+                                    ft.ProgressBar(
+                                        value=  att_per/100,  # must be 0.0–1.0
+                                        bgcolor="#4a4a4a",
+                                        color="#ff6b35",
+                                        expand=True,
+                                        height= 8,
+                                        border_radius=15
                                     ),
                                     # Percentage text
                                     ft.Text(
-                                        "90",
+                                        att_per,
                                         size=16,
                                         color="#ffffff",
                                         font_family="Inter",
@@ -529,27 +525,29 @@ class tracker:
                                     ft.Container(
                                         padding=ft.Padding(20, 10, 20, 10),
                                         border_radius=8,
-                                        bgcolor="#f5f5f5",  # Light background for Present
-                                        content=ft.Text(
-                                            "Present",
-                                            size=14,
-                                            color="#2a2a2a",  # Dark text
-                                            font_family="Inter",
-                                            weight="w500"
-                                        )
-                                    ),
-                                    ft.Container(
-                                        padding=ft.Padding(20, 10, 20, 10),
-                                        border_radius=8,
-                                        bgcolor="#ff6b35",  # Orange background for Absent
+                                        bgcolor="#f5f5f5",  # Orange background for Absent
                                         content=ft.Text(
                                             "Absent",
                                             size=14,
-                                            color="#ffffff",  # White text
+                                            color="#2a2a2a",  # White text
                                             font_family="Inter",
                                             weight="w500"
                                         )
                                     )
+                                    ,
+                                    ft.Container(
+                                        padding=ft.Padding(20, 10, 20, 10),
+                                        border_radius=8,
+                                        bgcolor="#ff6b35",  # Light background for Present
+                                        content=ft.Text(
+                                            "Present",
+                                            size=14,
+                                            color="#ffffff",  # Dark text
+                                            font_family="Inter",
+                                            weight="w500"
+                                        )
+                                    )
+
                                 ]
                             )
                         ]
