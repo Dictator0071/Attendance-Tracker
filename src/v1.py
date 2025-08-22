@@ -20,7 +20,7 @@ class tracker:
         self.sem_date = datetime.date(2025, 8, 4)
         self.attend_val = 75
         self.class_duration = 55
-        self.weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+        self.weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
 
         self.content_column = ft.Column(spacing= 10, expand= True)
         self.scroll_view = ft.Container(
@@ -122,7 +122,7 @@ class tracker:
 
         self.page.add(self.main_stack)
         self.page.overlay.append(self.fab)
-        self.update_db()
+        self.show_homepage(None)
 
     def update_db(self):
         self.c.execute("Select * FROM attendance")
@@ -131,7 +131,8 @@ class tracker:
         for item in items:
             self.c.execute("UPDATE attendance SET classes_held = ? WHERE subject =?", (self.classes_held(self.sem_date, datetime.date.today(), item[0]), item[0]))
             self.conn.commit()
-        self.show_homepage(None)
+
+
 
     def create_sub_screen(self, e):
         # Create the overlay screen
@@ -314,6 +315,38 @@ class tracker:
         self.fab.visible = True
         self.page.update()
 
+    def handle_attendance_click(self, e):
+        # Shared handler for both Present and Absent buttons
+        btn = e.control
+        data = getattr(btn, "data", {}) or {}
+        card = data.get("card")
+        present_btn = data.get("present_btn")
+        absent_btn = data.get("absent_btn")
+
+        if not card:
+            return
+
+        # Grey out the card and reduce emphasis
+        card.bgcolor = "#1f1f1f"
+        card.opacity = 0.6
+
+        # Disable both buttons and mute their styles
+        for b in (present_btn, absent_btn):
+            if b is not None:
+                b.on_click = None
+                b.disabled = True
+                b.bgcolor = "#3a3a3a"
+                if isinstance(b.content, ft.Text):
+                    b.content.color = "#9a9a9a"
+
+        # Move the card to the bottom of the list
+        try:
+            if card in self.content_column.controls:
+                self.content_column.controls.remove(card)
+                self.content_column.controls.append(card)
+        finally:
+            self.page.update()
+
     def on_attendance_change(self, e):
         # Handle attendance percentage change
         self.attend_val = int(e.control.value)
@@ -351,7 +384,7 @@ class tracker:
         def save_time(e, day, current_time):
             time_str = current_time.value.strftime("%H:%M")
             print(self.course_name.value, day, time_str, self.attend_val)
-            self.c.execute("INSERT INTO attendance (subject, req_attendance, day, timing) VALUES (?, ?, ?, ?)", (self.course_name.value, self.attend_val,day,time_str))
+            self.c.execute("INSERT INTO attendance (subject, req_attendance, day, timing, classes_held, classes_attended) VALUES (?, ?, ?, ?,?,?)", (self.course_name.value, self.attend_val,day,time_str, 0,0))
             self.conn.commit()
 
         for day in self.selected_days:
@@ -420,6 +453,7 @@ class tracker:
             return "Good evening"
 
     def show_homepage(self,e):
+        self.update_db()
         self.page.update()
         self.content_column.controls.clear()
 
@@ -463,16 +497,44 @@ class tracker:
 
                 att_per = round((classes_attended/classes_held) * 100)
 
+                # Buttons (handlers wired to shared logic)
+                absent_btn = ft.Container(
+                    padding=ft.Padding(20, 10, 20, 10),
+                    border_radius=8,
+                    bgcolor="#f5f5f5",
+                    content=ft.Text(
+                        "Absent",
+                        size=14,
+                        color="#2a2a2a",
+                        font_family="Inter",
+                        weight="w500",
+                    ),
+                    on_click=self.handle_attendance_click
+                )
+
+                present_btn = ft.Container(
+                    padding=ft.Padding(20, 10, 20, 10),
+                    border_radius=8,
+                    bgcolor="#ff6b35",
+                    content=ft.Text(
+                        "Present",
+                        size=14,
+                        color="#ffffff",
+                        font_family="Inter",
+                        weight="w500"
+                    ),
+                    on_click=self.handle_attendance_click
+                )
+
                 sub_card = ft.Container(
                     margin=ft.Margin(10, 0, 10, 10),
                     border_radius=15,
                     expand=True,
                     padding=ft.Padding(20, 20, 20, 15),
-                    bgcolor="#2a2a2a",  # Dark background like in the image
+                    bgcolor="#2a2a2a",
                     content=ft.Column(
                         spacing=15,
                         controls=[
-                            # Top section with subject and time
                             ft.Row(
                                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                                 controls=[
@@ -492,22 +554,18 @@ class tracker:
                                     )
                                 ]
                             ),
-
-                            # Progress section
                             ft.Row(
                                 spacing=8,
                                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                                 controls=[
-                                    # Progress bar
                                     ft.ProgressBar(
-                                        value=  att_per/100,  # must be 0.0–1.0
+                                        value=  att_per/100,
                                         bgcolor="#4a4a4a",
                                         color="#ff6b35",
                                         expand=True,
                                         height= 8,
                                         border_radius=15
                                     ),
-                                    # Percentage text
                                     ft.Text(
                                         att_per,
                                         size=16,
@@ -517,42 +575,20 @@ class tracker:
                                     )
                                 ]
                             ),
-
-                            # Bottom buttons section
                             ft.Row(
                                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                                 controls=[
-                                    ft.Container(
-                                        padding=ft.Padding(20, 10, 20, 10),
-                                        border_radius=8,
-                                        bgcolor="#f5f5f5",  # Orange background for Absent
-                                        content=ft.Text(
-                                            "Absent",
-                                            size=14,
-                                            color="#2a2a2a",  # White text
-                                            font_family="Inter",
-                                            weight="w500"
-                                        )
-                                    )
-                                    ,
-                                    ft.Container(
-                                        padding=ft.Padding(20, 10, 20, 10),
-                                        border_radius=8,
-                                        bgcolor="#ff6b35",  # Light background for Present
-                                        content=ft.Text(
-                                            "Present",
-                                            size=14,
-                                            color="#ffffff",  # Dark text
-                                            font_family="Inter",
-                                            weight="w500"
-                                        )
-                                    )
-
+                                    absent_btn,
+                                    present_btn
                                 ]
                             )
                         ]
                     )
                 )
+
+                # Pass references via each button's data for shared handler use
+                absent_btn.data = {"card": sub_card, "present_btn": present_btn, "absent_btn": absent_btn, "status": "absent"}
+                present_btn.data = {"card": sub_card, "present_btn": present_btn, "absent_btn": absent_btn, "status": "present"}
                 self.content_column.controls.extend([sub_card])
 
         else:  # No classes today
