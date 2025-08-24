@@ -20,7 +20,7 @@ class tracker:
         self.sem_date = datetime.date(2025, 8, 4)
         self.attend_val = 75
         self.class_duration = 55
-        self.weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+        self.weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
         self.content_column = ft.Column(spacing= 10, expand= True)
         self.scroll_view = ft.Container(
@@ -43,15 +43,16 @@ class tracker:
             bgcolor= None,
             on_click=lambda e: self.show_homepage(e)
         )
-        self.list_icon = ft.IconButton(
-            icon=ft.Icons.LIST_ALT_ROUNDED,
-            icon_color="#e0e0e0"
-        )
         self.chart_icon = ft.IconButton(
             icon=ft.Icons.INSERT_CHART_ROUNDED,
-            icon_color="#e0e0e0"
+            icon_color="#e0e0e0",
+            on_click=lambda e: self.show_chart_screen(e)
         )
-
+        self.list_icon = ft.IconButton(
+            icon=ft.Icons.LIST_ALT_ROUNDED,
+            icon_color="#e0e0e0",
+            on_click=lambda e: self.show_list_screen(e)
+        )
         # Navigation Bar
         self.nav_bar = ft.Container(
             padding=ft.padding.symmetric(vertical=0, horizontal=0),
@@ -60,8 +61,9 @@ class tracker:
                 alignment=ft.MainAxisAlignment.SPACE_AROUND,
                 controls=[
                     self.home_icon,
-                    self.list_icon,
-                    self.chart_icon
+                    self.chart_icon,
+                    self.list_icon
+
                 ],
                 expand=True  # Row should also expand
             )
@@ -607,6 +609,120 @@ class tracker:
             )
 
         self.page.update()
+
+    def show_chart_screen(self, e):
+        self.update_db()
+        self.page.update()
+        self.content_column.controls.clear()
+
+        self.home_icon.bgcolor = None
+        self.list_icon.bgcolor = None
+        self.chart_icon.bgcolor = "#404040"
+
+        self.c.execute("""SELECT * FROM attendance a WHERE rowid = (SELECT MIN(rowid) FROM attendance b WHERE b.subject = a.subject)""" )
+        rows = self.c.fetchall()
+
+        if rows:
+            for item in rows:
+                subject, req_attendance, day, timing, classes_held, classes_attended = item
+                att_per = round((classes_attended/classes_held) * 100)
+
+                sub_card = ft.Container(
+                    margin=ft.Margin(10, 0, 10, 10),
+                    border_radius=15,
+                    expand=True,
+                    padding=ft.Padding(20, 20, 20, 15),
+                    bgcolor="#2a2a2a",
+                    content=ft.Column(
+                        spacing=15,
+                        controls=[
+                            ft.Row(
+                                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                                controls=[
+                                    ft.Text(
+                                        subject,
+                                        size=18,
+                                        color="#ffffff",
+                                        font_family="Inter",
+                                        weight="w600"
+                                    ),
+                                ]
+                            ),
+                            ft.Row(
+                                spacing=8,
+                                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                                controls=[
+                                    ft.ProgressBar(
+                                        value=  att_per/100,
+                                        bgcolor="#4a4a4a",
+                                        color="#ff6b35",
+                                        expand=True,
+                                        height= 8,
+                                        border_radius=15
+                                    ),
+                                    ft.Text(
+                                        att_per,
+                                        size=16,
+                                        color="#ffffff",
+                                        font_family="Inter",
+                                        weight="w600"
+                                    )
+                                ]
+                            )
+                        ]
+                    )
+                )
+
+                self.content_column.controls.extend([sub_card])
+
+        else:  # No classes today
+            self.content_column.controls.extend( [
+                ft.Container(
+                    padding=ft.Padding(20, 40, 20, 0),
+                    content=ft.Text(
+                        "No classes today 🎉",
+                        size=22,
+                        color="#aaaaaa",
+                        font_family="Inter",
+                        weight="w600",
+                    )
+                )
+            ]
+            )
+
+        self.page.update()
+
+    def show_list_screen(self, e):
+        self.update_db()
+        self.page.update()
+        self.content_column.controls.clear()
+
+        self.home_icon.bgcolor = None
+        self.list_icon.bgcolor = "#404040"
+        self.chart_icon.bgcolor = None
+
+        # List screen content - showing "nothing to show"
+        list_content = ft.Container(
+            padding=ft.Padding(20, 40, 20, 0),
+            content=ft.Column(
+                spacing=0,
+                alignment=ft.MainAxisAlignment.CENTER,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                controls=[
+                    ft.Text(
+                        "nothing to show",
+                        size=24,
+                        color="#aaaaaa",
+                        font_family="Inter",
+                        weight="w600",
+                    )
+                ]
+            )
+        )
+
+        self.content_column.controls.append(list_content)
+        self.page.update()
+
 
 def main(page: ft.Page):
     tracker(page)
