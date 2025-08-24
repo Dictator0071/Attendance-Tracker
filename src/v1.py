@@ -21,6 +21,7 @@ class tracker:
         self.attend_val = 75
         self.class_duration = 55
         self.weekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+        self.selected_date = datetime.date.today()  # Initialize selected date for calendar widget
 
         self.content_column = ft.Column(spacing= 10, expand= True)
         self.scroll_view = ft.Container(
@@ -465,32 +466,91 @@ class tracker:
 
         greet_text = ft.Container(
             padding=ft.Padding(20,40,20,0),
-            content=ft.Column(
-                spacing=0,
-                alignment=ft.MainAxisAlignment.START,
+            content=ft.Row(
+                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                 controls=[
-                    ft.Text(
-                        self.get_greeting(),
-                        size=20,
-                        color="#e0e0e0",
-                        font_family="Inter",
-                        weight="w800",
+                    ft.Column(
+                        spacing=0,
+                        alignment=ft.MainAxisAlignment.START,
+                        controls=[
+                            ft.Text(
+                                self.get_greeting(),
+                                size=20,
+                                color="#e0e0e0",
+                                font_family="Inter",
+                                weight="w800",
+                            ),
+                            ft.Text(
+                                "Rudra Agrawal",
+                                size=28,
+                                color="#ffb366",
+                                font_family="Inter",
+                                weight="w900",
+                            ),
+                        ]
                     ),
-                    ft.Text(
-                        "Rudra Agrawal",
-                        size=28,
-                        color="#ffb366",
-                        font_family="Inter",
-                        weight="w900",
-                    ),
+                    ft.PopupMenuButton(
+                        icon=ft.Icons.MORE_VERT,
+                        icon_color="#e0e0e0",
+                        icon_size=24,
+                        tooltip="More options",
+                        items=[
+                            ft.PopupMenuItem(
+                                text="Mark Present",
+                                icon=ft.Icons.CHECK_CIRCLE_OUTLINE,
+                                icon_color="#4CAF50",
+                                on_click=self.mark_all_present
+                            ),
+                            ft.PopupMenuItem(
+                                text="Mark Absent",
+                                icon=ft.Icons.CANCEL_OUTLINED,
+                                icon_color="#F44336",
+                                on_click=self.mark_all_absent
+                            )
+                        ]
+                    )
                 ]
             )
         )
 
         self.content_column.controls.append(greet_text)
 
-        current_day = (datetime.datetime.now()).strftime("%A")
-        self.c.execute("SELECT * FROM attendance WHERE day = ?", (current_day,))
+        # Simple date display with clickable calendar icon
+        date_row = ft.Container(
+            margin=ft.Margin(10, 15, 10, 15),
+            padding=ft.Padding(20, 15, 20, 15),
+            bgcolor="#2a2a2a",
+            border_radius=15,
+            border=ft.border.all(1, "#404040"),
+            content=ft.Row(
+                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                controls=[
+                    ft.Text(
+                        f"{self.selected_date.strftime('%A, %B %d, %Y')}",
+                        size=18,
+                        color="#ffffff",
+                        font_family="Inter",
+                        weight="w600"
+                    ),
+                    ft.IconButton(
+                        icon=ft.Icons.CALENDAR_TODAY_ROUNDED,
+                        icon_color="#ff6b35",
+                        icon_size=28,
+                        on_click=self.show_date_picker,
+                        style=ft.ButtonStyle(
+                            bgcolor="#404040",
+                            shape=ft.RoundedRectangleBorder(radius=12)
+                        )
+                    )
+                ]
+            )
+        )
+
+        self.content_column.controls.append(date_row)
+
+        # Get classes for the selected date (only if after semester start)
+        selected_day = self.selected_date.strftime("%A")
+        self.c.execute("SELECT * FROM attendance WHERE day = ?", (selected_day,))
         items = self.c.fetchall()
 
         if items:
@@ -593,12 +653,13 @@ class tracker:
                 present_btn.data = {"card": sub_card, "present_btn": present_btn, "absent_btn": absent_btn, "status": "present"}
                 self.content_column.controls.extend([sub_card])
 
-        else:  # No classes today
+        else:  # No classes for selected date
+            date_display = "today" if self.selected_date == datetime.date.today() else f"on {self.selected_date.strftime('%A')}"
             self.content_column.controls.extend( [
                 ft.Container(
                     padding=ft.Padding(20, 40, 20, 0),
                     content=ft.Text(
-                        "No classes today 🎉",
+                        f"No classes {date_display} 🎉",
                         size=22,
                         color="#aaaaaa",
                         font_family="Inter",
@@ -691,6 +752,39 @@ class tracker:
             )
 
         self.page.update()
+
+    def show_date_picker(self, e):
+        """Show date picker dialog to select a date"""
+        def date_changed(e):
+            if e.control.value:
+                self.selected_date = e.control.value
+                # Update the calendar display and refresh the homepage data
+                self.show_homepage(e)
+        
+        date_picker = ft.DatePicker(
+            on_change=date_changed,
+            first_date=self.sem_date,  # Can't select dates before semester starts
+            last_date=datetime.date(2030, 12, 31),
+            current_date=self.selected_date,
+        )
+        
+        self.page.overlay.append(date_picker)
+        self.page.update()
+        self.page.open(date_picker)
+
+    def mark_all_present(self, e):
+        """Dummy method to mark all classes as present"""
+        # This is a placeholder for future functionality
+        print("Mark all present clicked")
+        # You can implement actual logic here later
+        # For example: update all classes for the selected date to present
+
+    def mark_all_absent(self, e):
+        """Dummy method to mark all classes as absent"""
+        # This is a placeholder for future functionality
+        print("Mark all absent clicked")
+        # You can implement actual logic here later
+        # For example: update all classes for the selected date to absent
 
     def show_list_screen(self, e):
         self.update_db()
