@@ -498,13 +498,11 @@ class tracker:
                             ft.PopupMenuItem(
                                 text="Mark Present",
                                 icon=ft.Icons.CHECK_CIRCLE_OUTLINE,
-                                icon_color="#4CAF50",
                                 on_click=self.mark_all_present
                             ),
                             ft.PopupMenuItem(
                                 text="Mark Absent",
                                 icon=ft.Icons.CANCEL_OUTLINED,
-                                icon_color="#F44336",
                                 on_click=self.mark_all_absent
                             )
                         ]
