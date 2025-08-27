@@ -1,7 +1,21 @@
 import flet as ft
 import datetime
 import sqlite3
+import os
+from googleapiclient.discovery import build
 
+"""For the last build major of the important backend is done, 
+ I have imported google calendar but not used it to check for 
+ holidays need to do that and refine the UI for future use"""
+
+# Load environment variables from .env if available
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except Exception:
+    print("env can't be loaded")
+
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "AIzaSyDUMMY-EXAMPLE-KEY-DEFAULT")
 
 class tracker:
     def __init__(self, page: ft.Page):
